@@ -1,0 +1,10 @@
+name: buildpilot
+version: "1.0.0"
+description: Project tracking and progress recovery tools for AI agents.
+provides_tools:
+  - buildpilot_add_project
+  - buildpilot_list_projects
+  - buildpilot_add_task
+  - buildpilot_update_task
+  - buildpilot_checkpoint
+  - buildpilot_get_project_context
