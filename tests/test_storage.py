@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import storage
 
@@ -9,12 +10,21 @@ class StorageTests(unittest.TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
-        storage.DATA_DIR = Path(self.temp_dir.name)
-        storage.DB_PATH = storage.DATA_DIR / "test.db"
-        storage.init_db()
+        self.db_path = Path(self.temp_dir.name) / "test.db"
+        self.path_patcher = patch.object(
+            storage, "get_db_path", return_value=self.db_path
+        )
+        self.path_patcher.start()
 
     def tearDown(self):
+        self.path_patcher.stop()
         self.temp_dir.cleanup()
+
+    def test_database_initializes_automatically(self):
+        self.assertFalse(self.db_path.exists())
+        projects = storage.list_projects()
+        self.assertEqual(projects, [])
+        self.assertTrue(self.db_path.exists())
 
     def test_add_and_list_project(self):
         project_id = storage.add_project("Test Project", "Testing")

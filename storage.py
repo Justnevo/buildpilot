@@ -1,46 +1,64 @@
 import sqlite3
+from contextlib import closing, contextmanager
 from pathlib import Path
 from datetime import datetime, timezone
 
-DATA_DIR = Path.home() / ".buildpilot"
-DB_PATH = DATA_DIR / "buildpilot.db"
+from hermes_constants import get_hermes_home
 
 
+def get_db_path():
+    return (
+        get_hermes_home()
+        / "plugin-data"
+        / "buildpilot"
+        / "buildpilot.db"
+    )
+
+
+def _initialize_schema(conn):
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            status TEXT DEFAULT 'active',
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(project_id) REFERENCES projects(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS checkpoints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            summary TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(project_id) REFERENCES projects(id)
+        );
+    """)
+
+
+@contextmanager
 def get_connection():
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    db_path = get_db_path()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with closing(sqlite3.connect(db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        with conn:
+            _initialize_schema(conn)
+            yield conn
 
 
 def init_db():
-    with get_connection() as conn:
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS projects (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                description TEXT DEFAULT '',
-                status TEXT DEFAULT 'active',
-                created_at TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER NOT NULL,
-                title TEXT NOT NULL,
-                status TEXT DEFAULT 'pending',
-                created_at TEXT NOT NULL,
-                FOREIGN KEY(project_id) REFERENCES projects(id)
-            );
-
-            CREATE TABLE IF NOT EXISTS checkpoints (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER NOT NULL,
-                summary TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY(project_id) REFERENCES projects(id)
-            );
-        """)
+    with get_connection():
+        pass
 
 
 def add_project(name, description=""):
@@ -136,6 +154,8 @@ def latest_checkpoint(project_id):
         ).fetchone()
 
         return dict(row) if row else None
+
+
 def get_project_context(project_id):
     with get_connection() as conn:
         project = conn.execute(
