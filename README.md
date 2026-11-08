@@ -11,7 +11,8 @@ BuildPilot is a project tracking and progress recovery plugin for Hermes Agent. 
 - Update task statuses.
 - Save progress checkpoints.
 - Retrieve project details, tasks, and the latest checkpoint together.
-- Store project data locally using SQLite.
+- Initialize the database schema automatically on first use.
+- Keep project data separate for each Hermes profile.
 
 ## Available Tools
 
@@ -46,13 +47,17 @@ BuildPilot is a project tracking and progress recovery plugin for Hermes Agent. 
 
 ## Testing
 
-The project includes automated storage tests covering project creation, task management, checkpoint creation, and project-context retrieval.
+The project includes automated tests covering project creation, task management, checkpoint creation, project-context retrieval, and automatic database initialization.
 
-**Current test status: 8 tests passing.**
+**Current test status: 9 tests passing.**
 
 ## Data storage
 
-BuildPilot stores project information in a local SQLite database.
+BuildPilot stores its SQLite database in the active Hermes profile directory:
+
+`plugin-data/buildpilot/buildpilot.db`
+
+The database is created automatically when a BuildPilot tool is first used. Different Hermes profiles have separate databases.
 
 ## License
 
